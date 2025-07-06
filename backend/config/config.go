@@ -1,7 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 // Config holds application configuration
@@ -10,16 +13,43 @@ type Config struct {
 	TurvoClientName  string
 	TurvoClientSecret string
 	TurvoBaseURL     string
+
+	TurvoOAuthClientID     string
+	TurvoOAuthClientSecret string
+	TurvoOAuthUsername     string
+	TurvoOAuthPassword     string
+	TurvoOAuthScope        string
+	TurvoOAuthType         string
+	TurvoXApiKey           string
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
-	return &Config{
-		TurvoAPIKey:      getEnv("TURVO_API_KEY", "9VjKgnIlQS1255cn7cRvJ6jNf8Z4MElP1PGgBTsH"),
-		TurvoClientName:  getEnv("TURVO_CLIENT_NAME", "publicapi"),
-		TurvoClientSecret: getEnv("TURVO_CLIENT_SECRET", "secret"),
-		TurvoBaseURL:     getEnv("TURVO_BASE_URL", "https://my-sandbox-publicapi.turvo.com"),
+	// Load .env file if it exists
+	godotenv.Load()
+	config := &Config{
+		TurvoAPIKey:      getEnv("TURVO_API_KEY", ""),
+		TurvoClientName:  getEnv("TURVO_CLIENT_NAME", ""),
+		TurvoClientSecret: getEnv("TURVO_CLIENT_SECRET", ""),
+		TurvoBaseURL:     getEnv("TURVO_BASE_URL", ""),
+
+		TurvoOAuthClientID:     getEnv("TURVO_OAUTH_CLIENT_ID", ""),
+		TurvoOAuthClientSecret: getEnv("TURVO_OAUTH_CLIENT_SECRET", ""),
+		TurvoOAuthUsername:     getEnv("TURVO_OAUTH_USERNAME", ""),
+		TurvoOAuthPassword:     getEnv("TURVO_OAUTH_PASSWORD", ""),
+		TurvoOAuthScope:        getEnv("TURVO_OAUTH_SCOPE", ""),
+		TurvoOAuthType:         getEnv("TURVO_OAUTH_TYPE", ""),
+		TurvoXApiKey:           getEnv("TURVO_X_API_KEY", ""),
 	}
+	
+	// Debug: Log the loaded config (without sensitive data)
+	fmt.Printf("DEBUG: Loaded config - BaseURL: %s, ClientID: %s, Username: %s, XApiKey: %s\n", 
+		config.TurvoBaseURL, 
+		config.TurvoOAuthClientID, 
+		config.TurvoOAuthUsername, 
+		config.TurvoXApiKey)
+	
+	return config
 }
 
 // getEnv gets environment variable with fallback

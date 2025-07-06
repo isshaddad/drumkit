@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -13,8 +14,10 @@ import (
 
 // TurvoService handles Turvo API interactions
 type TurvoService struct {
-	config *config.Config
-	client *http.Client
+	config      *config.Config
+	client      *http.Client
+	accessToken string
+	tokenExpiry time.Time
 }
 
 // NewTurvoService creates a new Turvo service instance
@@ -25,6 +28,68 @@ func NewTurvoService(cfg *config.Config) *TurvoService {
 			Timeout: 30 * time.Second,
 		},
 	}
+}
+
+// getAccessToken fetches and caches a valid OAuth token from Turvo
+func (s *TurvoService) getAccessToken() (string, error) {
+	if s.accessToken != "" && time.Now().Before(s.tokenExpiry) {
+		return s.accessToken, nil
+	}
+
+	tokenURL := s.config.TurvoBaseURL + "/v1/oauth/token"
+	data := map[string]string{
+		"grant_type": "password",
+		"client_id": s.config.TurvoOAuthClientID,
+		"client_secret": s.config.TurvoOAuthClientSecret,
+		"username": s.config.TurvoOAuthUsername,
+		"password": s.config.TurvoOAuthPassword,
+		"scope": s.config.TurvoOAuthScope,
+		"type": s.config.TurvoOAuthType,
+	}
+	jsonData, _ := json.Marshal(data)
+
+	fmt.Printf("DEBUG: OAuth request URL: %s\n", tokenURL)
+	fmt.Printf("DEBUG: OAuth request headers: Content-Type=application/json, x-api-key=%s\n", s.config.TurvoXApiKey)
+	fmt.Printf("DEBUG: OAuth request body: %s\n", string(jsonData))
+
+	req, err := http.NewRequest("POST", tokenURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", s.config.TurvoXApiKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("DEBUG: OAuth response status: %s\n", resp.Status)
+	
+	// Read and log the response body for debugging
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Printf("DEBUG: OAuth response body: %s\n", string(bodyBytes))
+	
+	// Create a new reader for the JSON decoder since we consumed the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Turvo OAuth error: %s", resp.Status)
+	}
+
+	var result struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn  int    `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	s.accessToken = result.AccessToken
+	s.tokenExpiry = time.Now().Add(time.Duration(result.ExpiresIn-60) * time.Second) // 1 min buffer
+	fmt.Printf("DEBUG: Obtained new Turvo OAuth token, expires in %d seconds\n", result.ExpiresIn)
+	return s.accessToken, nil
 }
 
 // CreateShipment creates a new shipment in Turvo
@@ -41,8 +106,17 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	fmt.Printf("DEBUG: Turvo request JSON: %s\n", string(jsonData))
+
+	// Get OAuth token
+	token, err := s.getAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Turvo OAuth token: %w", err)
+	}
+
 	// Create HTTP request
 	url := fmt.Sprintf("%s/v1/shipments", s.config.TurvoBaseURL)
+	fmt.Printf("DEBUG: Turvo URL: %s\n", url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -50,22 +124,26 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.config.TurvoAPIKey))
-	req.Header.Set("X-Client-Name", s.config.TurvoClientName)
-	req.Header.Set("X-Client-Secret", s.config.TurvoClientSecret)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("x-api-key", s.config.TurvoXApiKey)
 
 	// Make the request
+	fmt.Printf("DEBUG: Making request to Turvo...\n")
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	fmt.Printf("DEBUG: Turvo response status: %s\n", resp.Status)
+
 	// Parse response
 	var turvoResponse types.TurvoShipmentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&turvoResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
+
+	fmt.Printf("DEBUG: Turvo response: %+v\n", turvoResponse)
 
 	// Check for HTTP errors
 	if resp.StatusCode >= 400 {

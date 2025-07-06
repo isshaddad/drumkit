@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -179,12 +180,15 @@ func createLoad(c *gin.Context, turvoService *services.TurvoService) {
 	var req types.CreateLoadRequest
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("DEBUG: Failed to bind JSON: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid request data",
+			"error":   "Invalid request data: " + err.Error(),
 		})
 		return
 	}
+
+	fmt.Printf("DEBUG: Received request successfully\n")
 
 	// Convert request to Load format
 	newLoad := types.Load{
@@ -201,8 +205,10 @@ func createLoad(c *gin.Context, turvoService *services.TurvoService) {
 	}
 
 	// Create shipment in Turvo
+	fmt.Printf("DEBUG: Calling Turvo service to create shipment\n")
 	turvoResponse, err := turvoService.CreateShipment(newLoad)
 	if err != nil {
+		fmt.Printf("DEBUG: Turvo service error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Failed to create shipment in Turvo: " + err.Error(),
