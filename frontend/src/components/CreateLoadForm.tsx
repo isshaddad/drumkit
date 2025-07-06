@@ -7,9 +7,16 @@ interface CreateLoadFormProps {
 }
 
 const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
+  // Helper function to format datetime for datetime-local input
+  const formatDateTimeForInput = (dateTimeStr: string) => {
+    if (!dateTimeStr) return '';
+    const date = new Date(dateTimeStr);
+    return date.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM for datetime-local input
+  };
+
   const [formData, setFormData] = useState<CreateLoadRequest>({
-    externalTMSLoadID: 'TURVO-2024-001',
-    freightLoadID: 'FL-2024-001',
+    externalTMSLoadID: 'TURVO-2025-001',
+    freightLoadID: 'FL-2025-001',
     status: 'Created',
     customer: {
       externalTMSId: 'CUST-001',
@@ -52,8 +59,8 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       email: 'warehouse@acme.com',
       businessHours: '8AM-5PM',
       refNumber: 'WH-ACME-001',
-      readyTime: '2024-01-15T08:00:00Z',
-      apptTime: '2024-01-15T09:00:00Z',
+      readyTime: formatDateTimeForInput('2025-07-06T08:00:00Z'),
+      apptTime: formatDateTimeForInput('2025-07-07T09:00:00Z'),
       apptNote: 'Call 30 minutes before arrival',
       timezone: 'PST',
       warehouseId: 'WH-001',
@@ -73,7 +80,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       businessHours: '9AM-6PM',
       refNumber: 'DC-ACME-001',
       mustDeliver: 'Yes',
-      apptTime: '2024-01-16T14:00:00Z',
+      apptTime: formatDateTimeForInput('2025-07-08T14:00:00Z'),
       apptNote: 'Inside delivery required',
       timezone: 'EST',
       warehouseId: 'DC-001',
@@ -95,15 +102,15 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       dispatchState: 'CA',
       externalTMSTruckId: 'TRUCK-001',
       externalTMSTrailerId: 'TRAILER-001',
-      confirmationSentTime: '2024-01-14T10:00:00Z',
-      confirmationReceivedTime: '2024-01-14T10:30:00Z',
-      dispatchedTime: '2024-01-14T11:00:00Z',
-      expectedPickupTime: '2024-01-15T09:00:00Z',
-      pickupStart: '2024-01-15T09:00:00Z',
-      pickupEnd: '2024-01-15T11:00:00Z',
-      expectedDeliveryTime: '2024-01-16T14:00:00Z',
-      deliveryStart: '2024-01-16T14:00:00Z',
-      deliveryEnd: '2024-01-16T16:00:00Z',
+      confirmationSentTime: formatDateTimeForInput('2025-07-06T10:00:00Z'),
+      confirmationReceivedTime: formatDateTimeForInput('2025-07-06T10:30:00Z'),
+      dispatchedTime: formatDateTimeForInput('2025-07-06T11:00:00Z'),
+      expectedPickupTime: formatDateTimeForInput('2025-07-07T09:00:00Z'),
+      pickupStart: formatDateTimeForInput('2025-07-07T09:00:00Z'),
+      pickupEnd: formatDateTimeForInput('2025-07-07T11:00:00Z'),
+      expectedDeliveryTime: formatDateTimeForInput('2025-07-08T14:00:00Z'),
+      deliveryStart: formatDateTimeForInput('2025-07-08T14:00:00Z'),
+      deliveryEnd: formatDateTimeForInput('2025-07-08T16:00:00Z'),
       signedBy: 'Sarah Wilson',
       externalTMSId: 'CARRIER-001',
     },
@@ -126,7 +133,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       numCommodities: 5,
       totalWeight: 5000.0,
       billableWeight: 5000.0,
-      poNums: 'PO-2024-001, PO-2024-002',
+      poNums: 'PO-2025-001, PO-2025-002',
       operator: 'John Operator',
       routeMiles: 500.0,
       minTempFahrenheit: 32.0,
@@ -182,12 +189,62 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
     setSuccess(false);
 
     try {
-      const response = await loadService.createLoad(formData);
+      // Format datetime fields to RFC3339 format before sending
+      const formattedData = {
+        ...formData,
+        pickup: {
+          ...formData.pickup,
+          readyTime: formData.pickup.readyTime
+            ? new Date(formData.pickup.readyTime).toISOString()
+            : '',
+          apptTime: formData.pickup.apptTime
+            ? new Date(formData.pickup.apptTime).toISOString()
+            : '',
+        },
+        consignee: {
+          ...formData.consignee,
+          apptTime: formData.consignee.apptTime
+            ? new Date(formData.consignee.apptTime).toISOString()
+            : '',
+        },
+        carrier: {
+          ...formData.carrier,
+          confirmationSentTime: formData.carrier.confirmationSentTime
+            ? new Date(formData.carrier.confirmationSentTime).toISOString()
+            : '',
+          confirmationReceivedTime: formData.carrier.confirmationReceivedTime
+            ? new Date(formData.carrier.confirmationReceivedTime).toISOString()
+            : '',
+          dispatchedTime: formData.carrier.dispatchedTime
+            ? new Date(formData.carrier.dispatchedTime).toISOString()
+            : '',
+          expectedPickupTime: formData.carrier.expectedPickupTime
+            ? new Date(formData.carrier.expectedPickupTime).toISOString()
+            : '',
+          pickupStart: formData.carrier.pickupStart
+            ? new Date(formData.carrier.pickupStart).toISOString()
+            : '',
+          pickupEnd: formData.carrier.pickupEnd
+            ? new Date(formData.carrier.pickupEnd).toISOString()
+            : '',
+          expectedDeliveryTime: formData.carrier.expectedDeliveryTime
+            ? new Date(formData.carrier.expectedDeliveryTime).toISOString()
+            : '',
+          deliveryStart: formData.carrier.deliveryStart
+            ? new Date(formData.carrier.deliveryStart).toISOString()
+            : '',
+          deliveryEnd: formData.carrier.deliveryEnd
+            ? new Date(formData.carrier.deliveryEnd).toISOString()
+            : '',
+        },
+      };
+
+      const response = await loadService.createLoad(formattedData);
       if (response.success) {
         setSuccess(true);
         setFormData({
-          externalTMSLoadID: 'TURVO-2024-002',
-          freightLoadID: 'FL-2024-002',
+          externalTMSLoadID: 'TURVO-2025-002',
+          freightLoadID: 'FL-2025-002',
           status: 'Created',
           customer: {
             externalTMSId: 'CUST-001',
@@ -230,8 +287,8 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             email: 'warehouse@acme.com',
             businessHours: '8AM-5PM',
             refNumber: 'WH-ACME-001',
-            readyTime: '2024-01-15T08:00:00Z',
-            apptTime: '2024-01-15T09:00:00Z',
+            readyTime: '2025-07-06T08:00:00Z',
+            apptTime: '2025-07-07T09:00:00Z',
             apptNote: 'Call 30 minutes before arrival',
             timezone: 'PST',
             warehouseId: 'WH-001',
@@ -251,7 +308,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             businessHours: '9AM-6PM',
             refNumber: 'DC-ACME-001',
             mustDeliver: 'Yes',
-            apptTime: '2024-01-16T14:00:00Z',
+            apptTime: '2025-07-08T14:00:00Z',
             apptNote: 'Inside delivery required',
             timezone: 'EST',
             warehouseId: 'DC-001',
@@ -273,15 +330,15 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             dispatchState: 'CA',
             externalTMSTruckId: 'TRUCK-001',
             externalTMSTrailerId: 'TRAILER-001',
-            confirmationSentTime: '2024-01-14T10:00:00Z',
-            confirmationReceivedTime: '2024-01-14T10:30:00Z',
-            dispatchedTime: '2024-01-14T11:00:00Z',
-            expectedPickupTime: '2024-01-15T09:00:00Z',
-            pickupStart: '2024-01-15T09:00:00Z',
-            pickupEnd: '2024-01-15T11:00:00Z',
-            expectedDeliveryTime: '2024-01-16T14:00:00Z',
-            deliveryStart: '2024-01-16T14:00:00Z',
-            deliveryEnd: '2024-01-16T16:00:00Z',
+            confirmationSentTime: '2025-07-06T10:00:00Z',
+            confirmationReceivedTime: '2025-07-06T10:30:00Z',
+            dispatchedTime: '2025-07-06T11:00:00Z',
+            expectedPickupTime: '2025-07-07T09:00:00Z',
+            pickupStart: '2025-07-07T09:00:00Z',
+            pickupEnd: '2025-07-07T11:00:00Z',
+            expectedDeliveryTime: '2025-07-08T14:00:00Z',
+            deliveryStart: '2025-07-08T14:00:00Z',
+            deliveryEnd: '2025-07-08T16:00:00Z',
             signedBy: 'Sarah Wilson',
             externalTMSId: 'CARRIER-001',
           },
@@ -304,7 +361,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             numCommodities: 5,
             totalWeight: 5000.0,
             billableWeight: 5000.0,
-            poNums: 'PO-2024-001, PO-2024-002',
+            poNums: 'PO-2025-001, PO-2025-002',
             operator: 'John Operator',
             routeMiles: 500.0,
             minTempFahrenheit: 32.0,
@@ -395,7 +452,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                     handleInputChange('freightLoadID', '', e.target.value)
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="e.g., FL-2024-001"
+                  placeholder="e.g., FL-2025-001"
                 />
               </div>
             </div>
@@ -1922,7 +1979,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                     )
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="PO-2024-001"
+                  placeholder="PO-2025-001"
                 />
               </div>
             </div>
