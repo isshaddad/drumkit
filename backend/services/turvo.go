@@ -115,7 +115,7 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/v1/shipments/list", s.config.TurvoBaseURL)
+	url := fmt.Sprintf("%s/v1/shipments", s.config.TurvoBaseURL)
 	fmt.Printf("DEBUG: Turvo URL: %s\n", url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
