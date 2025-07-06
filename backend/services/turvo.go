@@ -172,23 +172,73 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 		endDate = startDate.Add(72 * time.Hour) // Default to 3 days after pickup
 	}
 
+	// Format dates in RFC3339 format with timezone
+	startDateStr := startDate.Format("2006-01-02T15:04:05Z")
+	endDateStr := endDate.Format("2006-01-02T15:04:05Z")
+
 	// Create Turvo request
 	turvoRequest := &types.TurvoShipmentRequest{
 		LTLShipment: false, // Default to FTL
-		StartDate:   startDate,
-		EndDate:     endDate,
-		Status: types.TurvoStatus{
-			Status: load.Status,
-			Note:   "Created via Drumkit integration",
+		StartDate: types.TurvoDate{
+			Date:     startDateStr,
+			TimeZone: "America/New_York", // Default timezone
 		},
-		Lane: fmt.Sprintf("%s, %s to %s, %s", 
-			load.Pickup.City, load.Pickup.State, 
-			load.Consignee.City, load.Consignee.State),
+		EndDate: types.TurvoDate{
+			Date:     endDateStr,
+			TimeZone: "America/New_York", // Default timezone
+		},
+		Status: types.TurvoStatus{
+			Code: types.TurvoCode{
+				Value: "Covered",
+				Key:   "2102",
+			},
+			Notes:       "Created via Drumkit integration",
+			Description: "Covered",
+		},
+		Lane: types.TurvoLane{
+			Start: fmt.Sprintf("%s, %s", load.Pickup.City, load.Pickup.State),
+			End:   fmt.Sprintf("%s, %s", load.Consignee.City, load.Consignee.State),
+		},
+		SkipDistanceCalculation: true,
 		GlobalRoute: []types.TurvoGlobalRoute{
 			// Pickup stop
 			{
-				StopID:   "pickup-1",
-				StopType: "pickup",
+				GlobalShipLocationSourceId: "pickup-1",
+				Name:                       fmt.Sprintf("%s: %s", load.Pickup.Contact, load.Pickup.RefNumber),
+				SchedulingType: types.TurvoCode{
+					Key:   "9401",
+					Value: "By appointment",
+				},
+				StopType: types.TurvoCode{
+					Key:   "1500",
+					Value: "Pickup",
+				},
+				Timezone:        "America/New_York",
+				SegmentSequence: 0,
+				LayoverTime: types.TurvoLayoverTime{
+					Value: 1,
+					Units: types.TurvoCode{
+						Key:   "9900",
+						Value: "hours",
+					},
+				},
+				Sequence:                0,
+				State:                   "OPEN",
+				AppointmentConfirmation: true,
+				Appointment: types.TurvoAppointment{
+					Date:     startDateStr,
+					Timezone: "America/New_York",
+					Flex:     3600, // 1 hour flex
+					HasTime:  true,
+				},
+				Services: []types.TurvoCode{
+					{
+						Key:   "21307",
+						Value: "After hours",
+					},
+				},
+				PONumbers: []string{load.Specifications.PONums},
+				Notes:     load.Pickup.ApptNote,
 				Location: types.TurvoLocation{
 					AddressLine1: load.Pickup.AddressLine1,
 					AddressLine2: load.Pickup.AddressLine2,
@@ -200,19 +250,69 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 					Phone:        load.Pickup.Phone,
 					Email:        load.Pickup.Email,
 				},
-				Transportation: []types.TurvoTransport{
-					{
-						Mode: "truck",
+				Transportation: types.TurvoTransportation{
+					Mode: types.TurvoCode{
+						Key:   "24105",
+						Value: "TL",
+					},
+					ServiceType: types.TurvoCode{
+						Key:   "24304",
+						Value: "Any",
 					},
 				},
-				AppointmentTime: &load.Pickup.ApptTime,
-				BusinessHours:   load.Pickup.BusinessHours,
-				Notes:           load.Pickup.ApptNote,
+				FragmentDistance: types.TurvoDistance{
+					Value: 120,
+					Units: types.TurvoCode{
+						Key:   "1540",
+						Value: "mi",
+					},
+				},
+				Distance: types.TurvoDistance{
+					Value: 0,
+					Units: types.TurvoCode{
+						Key:   "1540",
+						Value: "mi",
+					},
+				},
 			},
 			// Delivery stop
 			{
-				StopID:   "delivery-1",
-				StopType: "delivery",
+				GlobalShipLocationSourceId: "delivery-1",
+				Name:                       fmt.Sprintf("%s: %s", load.Consignee.Contact, load.Consignee.RefNumber),
+				SchedulingType: types.TurvoCode{
+					Key:   "9401",
+					Value: "By appointment",
+				},
+				StopType: types.TurvoCode{
+					Key:   "1501",
+					Value: "Delivery",
+				},
+				Timezone:        "America/New_York",
+				SegmentSequence: 0,
+				LayoverTime: types.TurvoLayoverTime{
+					Value: 1,
+					Units: types.TurvoCode{
+						Key:   "9900",
+						Value: "hours",
+					},
+				},
+				Sequence:                1,
+				State:                   "OPEN",
+				AppointmentConfirmation: true,
+				Appointment: types.TurvoAppointment{
+					Date:     endDateStr,
+					Timezone: "America/New_York",
+					Flex:     14400, // 4 hours flex
+					HasTime:  true,
+				},
+				Services: []types.TurvoCode{
+					{
+						Key:   "21407",
+						Value: "Delivery Appointment",
+					},
+				},
+				PONumbers: []string{load.Specifications.PONums},
+				Notes:     load.Consignee.ApptNote,
 				Location: types.TurvoLocation{
 					AddressLine1: load.Consignee.AddressLine1,
 					AddressLine2: load.Consignee.AddressLine2,
@@ -224,154 +324,132 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 					Phone:        load.Consignee.Phone,
 					Email:        load.Consignee.Email,
 				},
-				Transportation: []types.TurvoTransport{
-					{
-						Mode: "truck",
+				Transportation: types.TurvoTransportation{
+					Mode: types.TurvoCode{
+						Key:   "24105",
+						Value: "TL",
+					},
+					ServiceType: types.TurvoCode{
+						Key:   "24304",
+						Value: "Any",
 					},
 				},
-				AppointmentTime: &load.Consignee.ApptTime,
-				BusinessHours:   load.Consignee.BusinessHours,
-				Notes:           load.Consignee.ApptNote,
+				FragmentDistance: types.TurvoDistance{
+					Value: 120,
+					Units: types.TurvoCode{
+						Key:   "1540",
+						Value: "mi",
+					},
+				},
+				StopLevelFragmentDistance: 120,
+			},
+		},
+		ModeInfo: []types.TurvoModeInfo{
+			{
+				Operation:              0,
+				SourceSegmentSequence: "0",
+				Mode: types.TurvoCode{
+					Key:   "24105",
+					Value: "TL",
+				},
+				ServiceType: types.TurvoCode{
+					Key:   "24304",
+					Value: "Any",
+				},
+				TotalSegmentValue: types.TurvoSegmentValue{
+					Sync:  true,
+					Value: 0,
+					Currency: types.TurvoCode{
+						Key:   "1550",
+						Value: "USD",
+					},
+				},
 			},
 		},
 		CustomerOrder: []types.TurvoCustomerOrder{
 			{
-				CustomerID:    load.Customer.ExternalTMSId,
-				OrderNumber:   load.FreightLoadID,
-				Reference:     load.ExternalTMSLoadID,
-				TotalWeight:   load.Specifications.TotalWeight,
-				TotalPallets:  load.Specifications.InPalletCount,
-				SpecialInstructions: fmt.Sprintf("PO: %s, Operator: %s", 
-					load.Specifications.PONums, load.Specifications.Operator),
+				CustomerOrderSourceID: 1, // Default ID
+				Customer: types.TurvoCustomer{
+					ID:   1, // Default ID
+					Name: load.Customer.Name,
+				},
+				Items: []types.TurvoItem{
+					{
+						ItemCategory: types.TurvoCode{
+							Key:   "22300",
+							Value: "Other",
+						},
+						Qty:  load.Specifications.InPalletCount,
+						Unit: types.TurvoCode{
+							Key:   "6003",
+							Value: "Pallets",
+						},
+						Name: "Freight",
+						Notes: fmt.Sprintf("PO: %s, Operator: %s", 
+							load.Specifications.PONums, load.Specifications.Operator),
+						Operation: 0,
+						IsHazmat:  load.Specifications.Hazmat,
+						Stackable: true,
+						Value:     int(load.RateData.CustomerLhRateUsd * 100), // Convert to cents
+						TotalValue: int(load.RateData.CustomerLhRateUsd * float64(load.Specifications.InPalletCount) * 100),
+						Currency: types.TurvoCode{
+							Key:   "1550",
+							Value: "USD",
+						},
+					},
+				},
+				Costs: types.TurvoCosts{
+					TotalAmount: int(load.RateData.CustomerLhRateUsd * 100), // Convert to cents
+					LineItem: []types.TurvoLineItem{
+						{
+							Code: types.TurvoCode{
+								Key:   "1600",
+								Value: "Freight - flat",
+							},
+							Qty:      1,
+							Price:    int(load.RateData.CustomerLhRateUsd * 100),
+							Amount:   int(load.RateData.CustomerLhRateUsd * 100),
+							Billable: true,
+							Notes:    "Freight charges",
+						},
+					},
+				},
+				ExternalIDs: []types.TurvoExternalID{
+					{
+						Type: types.TurvoCode{
+							Key:   "1400",
+							Value: "Purchase order #",
+						},
+						Value:             load.Specifications.PONums,
+						CopyToCarrierOrder: true,
+					},
+				},
 			},
 		},
-		Services: s.buildServices(load.Specifications),
+		UseRoutingGuide: true,
 	}
 
 	// Add carrier information if available
-	if load.Carrier.ExternalTMSId != "" {
+	if load.Carrier.Name != "" {
 		turvoRequest.CarrierOrder = []types.TurvoCarrierOrder{
 			{
-				CarrierID:    load.Carrier.ExternalTMSId,
-				OrderNumber:  load.FreightLoadID,
-				Rate:         load.RateData.CarrierMaxRate,
-				RateType:     load.RateData.CarrierRateType,
-				DriverName:   load.Carrier.FirstDriverName,
-				DriverPhone:  load.Carrier.FirstDriverPhone,
-				TrailerNumber: load.Carrier.ExternalTMSTrailerID,
+				CarrierOrderSourceID: 1, // Default ID
+				Carrier: types.TurvoCarrier{
+					ID:   1, // Default ID
+					Name: load.Carrier.Name,
+				},
+				Drivers: []types.TurvoDriver{
+					{
+						DriverID:        1, // Default ID
+						Operation:       0,
+						SegmentSequence: 0,
+					},
+				},
 			},
-		}
-	}
-
-	// Add margin information if available
-	if load.RateData.NetProfitUsd > 0 {
-		turvoRequest.Margin = &types.TurvoMargin{
-			MarginType:    "fixed",
-			MarginAmount:  load.RateData.NetProfitUsd,
-			MarginPercent: load.RateData.ProfitPercent,
 		}
 	}
 
 	return turvoRequest, nil
 }
 
-// buildServices converts Drumkit specifications to Turvo services
-func (s *TurvoService) buildServices(specs types.Specifications) []types.TurvoService {
-	var services []types.TurvoService
-
-	// Add temperature control if specified
-	if specs.MinTempFahrenheit > 0 || specs.MaxTempFahrenheit > 0 {
-		services = append(services, types.TurvoService{
-			ServiceType: "temperature_control",
-			ServiceKey:  "temperature_range",
-			ServiceValue: fmt.Sprintf("%.0f-%.0f", specs.MinTempFahrenheit, specs.MaxTempFahrenheit),
-		})
-	}
-
-	// Add liftgate services
-	if specs.LiftgatePickup {
-		services = append(services, types.TurvoService{
-			ServiceType: "liftgate",
-			ServiceKey:  "location",
-			ServiceValue: "pickup",
-		})
-	}
-
-	if specs.LiftgateDelivery {
-		services = append(services, types.TurvoService{
-			ServiceType: "liftgate",
-			ServiceKey:  "location",
-			ServiceValue: "delivery",
-		})
-	}
-
-	// Add inside delivery/pickup services
-	if specs.InsidePickup {
-		services = append(services, types.TurvoService{
-			ServiceType: "inside_pickup",
-		})
-	}
-
-	if specs.InsideDelivery {
-		services = append(services, types.TurvoService{
-			ServiceType: "inside_delivery",
-		})
-	}
-
-	// Add other services
-	if specs.Tarps {
-		services = append(services, types.TurvoService{
-			ServiceType: "tarps",
-		})
-	}
-
-	if specs.Straps {
-		services = append(services, types.TurvoService{
-			ServiceType: "straps",
-		})
-	}
-
-	if specs.Hazmat {
-		services = append(services, types.TurvoService{
-			ServiceType: "hazmat",
-		})
-	}
-
-	if specs.Oversized {
-		services = append(services, types.TurvoService{
-			ServiceType: "oversized",
-		})
-	}
-
-	if specs.Permits {
-		services = append(services, types.TurvoService{
-			ServiceType: "permits",
-		})
-	}
-
-	if specs.Escorts {
-		services = append(services, types.TurvoService{
-			ServiceType: "escorts",
-		})
-	}
-
-	if specs.Seal {
-		services = append(services, types.TurvoService{
-			ServiceType: "seal",
-		})
-	}
-
-	if specs.CustomBonded {
-		services = append(services, types.TurvoService{
-			ServiceType: "custom_bonded",
-		})
-	}
-
-	if specs.Labor {
-		services = append(services, types.TurvoService{
-			ServiceType: "labor",
-		})
-	}
-
-	return services
-} 
+ 
