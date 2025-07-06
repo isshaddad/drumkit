@@ -32,7 +32,9 @@ func main() {
 	api := r.Group("/api")
 	{
 		// Get all loads
-		api.GET("/loads", getLoads)
+		api.GET("/loads", func(c *gin.Context) {
+			getLoads(c, turvoService)
+		})
 		
 		// Create a new load
 		api.POST("/loads", func(c *gin.Context) {
@@ -49,130 +51,155 @@ func main() {
 }
 
 // getLoads returns all loads from Turvo
-func getLoads(c *gin.Context) {
-	// TODO: Implement actual Turvo API integration
-	// For now, return mock data in Drumkit format
-	loads := []types.Load{
-		{
-			ExternalTMSLoadID: "TURVO-001",
-			FreightLoadID:     "FL-2024-001",
-			Status:            "In Transit",
-			Customer: types.Customer{
-				ExternalTMSId: "CUST-001",
-				Name:          "ABC Manufacturing",
-				AddressLine1:  "123 Industrial Blvd",
-				City:          "Los Angeles",
-				State:         "CA",
-				Zipcode:       "90210",
-				Country:       "USA",
-				Contact:       "John Smith",
-				Phone:         "555-123-4567",
-				Email:         "john@abcmfg.com",
-				RefNumber:     "PO-2024-001",
-			},
-			BillTo: types.BillTo{
-				ExternalTMSId: "BILL-001",
-				Name:          "ABC Manufacturing",
-				AddressLine1:  "123 Industrial Blvd",
-				City:          "Los Angeles",
-				State:         "CA",
-				Zipcode:       "90210",
-				Country:       "USA",
-				Contact:       "John Smith",
-				Phone:         "555-123-4567",
-				Email:         "billing@abcmfg.com",
-			},
-			Pickup: types.Pickup{
-				ExternalTMSId: "PICKUP-001",
-				Name:          "ABC Manufacturing Warehouse",
-				AddressLine1:  "123 Industrial Blvd",
-				City:          "Los Angeles",
-				State:         "CA",
-				Zipcode:       "90210",
-				Country:       "USA",
-				Contact:       "Warehouse Manager",
-				Phone:         "555-123-4568",
-				Email:         "warehouse@abcmfg.com",
-				BusinessHours: "8AM-5PM",
-				RefNumber:     "WH-001",
-				ReadyTime:     time.Now(),
-				ApptTime:      time.Now().Add(24 * time.Hour),
-				ApptNote:      "Call 30 minutes before arrival",
-				Timezone:      "PST",
-				WarehouseID:   "WH-001",
-			},
-			Consignee: types.Consignee{
-				ExternalTMSId: "CONSIGNEE-001",
-				Name:          "XYZ Distribution",
-				AddressLine1:  "456 Delivery Ave",
-				City:          "New York",
-				State:         "NY",
-				Zipcode:       "10001",
-				Country:       "USA",
-				Contact:       "Jane Doe",
-				Phone:         "555-987-6543",
-				Email:         "receiving@xyzdist.com",
-				BusinessHours: "9AM-6PM",
-				RefNumber:     "DC-001",
-				MustDeliver:   "Yes",
-				ApptTime:      time.Now().Add(72 * time.Hour),
-				ApptNote:      "Inside delivery required",
-				Timezone:      "EST",
-				WarehouseID:   "DC-001",
-			},
-			Carrier: types.Carrier{
-				MCNumber:     "MC123456",
-				DOTNumber:    "DOT789012",
-				Name:         "Fast Freight Inc",
-				Phone:        "555-555-5555",
-				Dispatcher:   "Mike Johnson",
-				SCAC:         "FAST",
-				Email:        "dispatch@fastfreight.com",
-				DispatchCity: "Los Angeles",
-				DispatchState: "CA",
-			},
-			RateData: types.RateData{
-				CustomerRateType: "Flat Rate",
-				CustomerNumHours: 48.0,
-				CustomerLhRateUsd: 150.0,
-				FSCPercent:       15.0,
-				CarrierRateType:   "Flat Rate",
-				CarrierNumHours:   48.0,
-				CarrierLhRateUsd:  120.0,
-				CarrierMaxRate:    5000.0,
-				NetProfitUsd:      500.0,
-				ProfitPercent:     10.0,
-			},
-			Specifications: types.Specifications{
-				InPalletCount:      20,
-				OutPalletCount:     20,
-				NumCommodities:     5,
-				TotalWeight:        5000.0,
-				BillableWeight:     5000.0,
-				PONums:             "PO-2024-001",
-				Operator:           "John Smith",
-				RouteMiles:         2789.0,
-				LiftgatePickup:     false,
-				LiftgateDelivery:   false,
-				InsidePickup:       false,
-				InsideDelivery:     true,
-				Tarps:              false,
-				Oversized:          false,
-				Hazmat:             false,
-				Straps:             true,
-				Permits:            false,
-				Escorts:            false,
-				Seal:               true,
-				CustomBonded:       false,
-				Labor:              false,
-			},
-		},
+func getLoads(c *gin.Context, turvoService *services.TurvoService) {
+	fmt.Printf("DEBUG: Fetching loads from Turvo\n")
+	
+	// Get shipments from Turvo
+	turvoShipments, err := turvoService.GetShipments()
+	if err != nil {
+		fmt.Printf("DEBUG: Failed to get shipments from Turvo: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to fetch shipments from Turvo: " + err.Error(),
+		})
+		return
+	}
+
+	// Convert Turvo shipments to Drumkit format
+	loads := []types.Load{}
+	for _, shipment := range turvoShipments {
+		load := convertTurvoToDrumkit(shipment)
+		loads = append(loads, load)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    loads,
 	})
+}
+
+// convertTurvoToDrumkit converts a Turvo shipment to Drumkit load format
+func convertTurvoToDrumkit(shipment types.TurvoShipment) types.Load {
+	// Extract pickup and delivery locations from global route
+	var pickup, delivery *types.TurvoGlobalRoute
+	for _, route := range shipment.GlobalRoute {
+		if route.StopType.Key == "1500" { // Pickup
+			pickup = &route
+		} else if route.StopType.Key == "1501" { // Delivery
+			delivery = &route
+		}
+	}
+
+	// Extract customer info from customer order
+	var customerName string
+	if len(shipment.CustomerOrder) > 0 {
+		customerName = shipment.CustomerOrder[0].Customer.Name
+	}
+
+	// Extract total weight from customer order items
+	var totalWeight float64
+	if len(shipment.CustomerOrder) > 0 && len(shipment.CustomerOrder[0].Items) > 0 {
+		// Sum up all item weights or use a default
+		totalWeight = 5000.0 // Default weight
+	}
+
+	load := types.Load{
+		ExternalTMSLoadID: shipment.ShipmentID,
+		FreightLoadID:     shipment.ShipmentID,
+		Status:            shipment.Status.Code.Value,
+		Customer: types.Customer{
+			ExternalTMSId: fmt.Sprintf("CUST-%s", shipment.ShipmentID),
+			Name:          customerName,
+			AddressLine1:  "N/A",
+			City:          "N/A",
+			State:         "N/A",
+			Zipcode:       "N/A",
+			Country:       "USA",
+			Contact:       "N/A",
+			Phone:         "N/A",
+			Email:         "N/A",
+			RefNumber:     "N/A",
+		},
+		Pickup: types.Pickup{
+			ExternalTMSId: "N/A",
+			Name:          "N/A",
+			AddressLine1:  getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.AddressLine1 }),
+			City:          getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.City }),
+			State:         getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.State }),
+			Zipcode:       getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.ZipCode }),
+			Country:       getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.Country }),
+			Contact:       getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.ContactName }),
+			Phone:         getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.Phone }),
+			Email:         getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Location.Email }),
+			BusinessHours: "N/A",
+			RefNumber:     "N/A",
+			ReadyTime:     time.Time{},
+			ApptTime:      time.Time{},
+			ApptNote:      getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Notes }),
+			Timezone:      getPickupField(pickup, func(r *types.TurvoGlobalRoute) string { return r.Timezone }),
+			WarehouseID:   "N/A",
+		},
+		Consignee: types.Consignee{
+			ExternalTMSId: "N/A",
+			Name:          "N/A",
+			AddressLine1:  getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.AddressLine1 }),
+			City:          getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.City }),
+			State:         getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.State }),
+			Zipcode:       getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.ZipCode }),
+			Country:       getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.Country }),
+			Contact:       getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.ContactName }),
+			Phone:         getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.Phone }),
+			Email:         getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Location.Email }),
+			BusinessHours: "N/A",
+			RefNumber:     "N/A",
+			MustDeliver:   "N/A",
+			ApptTime:      time.Time{},
+			ApptNote:      getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Notes }),
+			Timezone:      getDeliveryField(delivery, func(r *types.TurvoGlobalRoute) string { return r.Timezone }),
+			WarehouseID:   "N/A",
+		},
+		Specifications: types.Specifications{
+			InPalletCount:      0,
+			OutPalletCount:     0,
+			NumCommodities:     0,
+			TotalWeight:        totalWeight,
+			BillableWeight:     totalWeight,
+			PONums:             "N/A",
+			Operator:           "N/A",
+			RouteMiles:         0.0,
+			LiftgatePickup:     false,
+			LiftgateDelivery:   false,
+			InsidePickup:       false,
+			InsideDelivery:     false,
+			Tarps:              false,
+			Oversized:          false,
+			Hazmat:             false,
+			Straps:             false,
+			Permits:            false,
+			Escorts:            false,
+			Seal:               false,
+			CustomBonded:       false,
+			Labor:              false,
+		},
+	}
+
+	return load
+}
+
+// getPickupField safely extracts a field from pickup route
+func getPickupField(pickup *types.TurvoGlobalRoute, extractor func(*types.TurvoGlobalRoute) string) string {
+	if pickup != nil {
+		return extractor(pickup)
+	}
+	return "N/A"
+}
+
+// getDeliveryField safely extracts a field from delivery route
+func getDeliveryField(delivery *types.TurvoGlobalRoute, extractor func(*types.TurvoGlobalRoute) string) string {
+	if delivery != nil {
+		return extractor(delivery)
+	}
+	return "N/A"
 }
 
 // createLoad creates a new load in Turvo

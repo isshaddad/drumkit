@@ -307,4 +307,63 @@ type TurvoShipmentResponse struct {
 	Status     string `json:"status"`
 	Message    string `json:"message,omitempty"`
 	Error      string `json:"error,omitempty"`
+}
+
+// TurvoShipment represents a shipment from Turvo's GET /shipments API
+type TurvoShipment struct {
+	ShipmentID string `json:"shipmentId"`
+	Status     TurvoStatus `json:"status"`
+	Lane       TurvoLane `json:"lane"`
+	GlobalRoute []TurvoGlobalRoute `json:"globalRoute"`
+	CustomerOrder []TurvoCustomerOrder `json:"customerOrder"`
+	CarrierOrder []TurvoCarrierOrder `json:"carrierOrder,omitempty"`
+	StartDate  TurvoDate `json:"startDate"`
+	EndDate    TurvoDate `json:"endDate"`
+	LTLShipment bool `json:"ltlShipment"`
+}
+
+// TurvoShipmentsResponse represents the response from GET /shipments
+type TurvoShipmentsResponse struct {
+	Status  string `json:"Status"`
+	Details struct {
+		Pagination struct {
+			Start              int `json:"start"`
+			PageSize           int `json:"pageSize"`
+			TotalRecordsInPage int `json:"totalRecordsInPage"`
+			MoreAvailable      bool `json:"moreAvailable"`
+		} `json:"pagination"`
+		Shipments []TurvoShipmentData `json:"shipments"`
+	} `json:"details"`
+}
+
+// TurvoShipmentData represents the actual shipment data in the response
+type TurvoShipmentData struct {
+	ID           int    `json:"id"`
+	CustomID     string `json:"customId"`
+	Status       struct {
+		Code struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		} `json:"code"`
+	} `json:"status"`
+	CustomerOrder []struct {
+		ID       int `json:"id"`
+		Customer struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		} `json:"customer"`
+		Deleted bool `json:"deleted"`
+	} `json:"customerOrder"`
+	CarrierOrder []struct {
+		ID      int `json:"id"`
+		Carrier struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		} `json:"carrier"`
+		Deleted bool `json:"deleted"`
+	} `json:"carrierOrder"`
+	Created       string `json:"created"`
+	Updated       string `json:"updated"`
+	LastUpdatedOn string `json:"lastUpdatedOn"`
+	CreatedDate   string `json:"createdDate"`
 } 

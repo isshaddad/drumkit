@@ -115,7 +115,7 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/v1/shipments", s.config.TurvoBaseURL)
+	url := fmt.Sprintf("%s/v1/shipments/list", s.config.TurvoBaseURL)
 	fmt.Printf("DEBUG: Turvo URL: %s\n", url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -151,6 +151,135 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 	}
 
 	return &turvoResponse, nil
+}
+
+// GetShipments fetches all shipments from Turvo
+func (s *TurvoService) GetShipments() ([]types.TurvoShipment, error) {
+	// Get OAuth token
+	token, err := s.getAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Turvo OAuth token: %w", err)
+	}
+
+	// Create HTTP request with pickup date range
+	// Get shipments from the last 30 days	
+	url := fmt.Sprintf("%s/v1/shipments/list?pickupDate[gte]=2025-07-05T00:00:00Z", 
+		s.config.TurvoBaseURL,
+	)
+	fmt.Printf("DEBUG: Turvo GET shipments URL: %s\n", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("x-api-key", s.config.TurvoXApiKey)
+
+	// Make the request
+	fmt.Printf("DEBUG: Making GET request to Turvo...\n")
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("DEBUG: Turvo GET response status: %s\n", resp.Status)
+
+	// Read and log the response body for debugging
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Printf("DEBUG: Turvo GET response body: %s\n", string(bodyBytes))
+	
+	// Create a new reader for the JSON decoder since we consumed the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Check for HTTP errors
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("Turvo API error: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	// Parse response
+	var response types.TurvoShipmentsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	fmt.Printf("DEBUG: Retrieved %d shipments from Turvo\n", len(response.Details.Shipments))
+	
+	// Convert to TurvoShipment format for compatibility
+	shipments := []types.TurvoShipment{}
+	for _, shipmentData := range response.Details.Shipments {
+		shipment := convertShipmentDataToTurvoShipment(shipmentData)
+		shipments = append(shipments, shipment)
+	}
+	
+	return shipments, nil
+}
+
+// convertShipmentDataToTurvoShipment converts TurvoShipmentData to TurvoShipment
+func convertShipmentDataToTurvoShipment(data types.TurvoShipmentData) types.TurvoShipment {
+	// Extract customer name
+	var customerName string
+	if len(data.CustomerOrder) > 0 {
+		customerName = data.CustomerOrder[0].Customer.Name
+	}
+
+	// Extract carrier name
+	var carrierName string
+	if len(data.CarrierOrder) > 0 {
+		carrierName = data.CarrierOrder[0].Carrier.Name
+	}
+
+	shipment := types.TurvoShipment{
+		ShipmentID: data.CustomID,
+		Status: types.TurvoStatus{
+			Code: types.TurvoCode{
+				Key:   data.Status.Code.Key,
+				Value: data.Status.Code.Value,
+			},
+			Notes:       "",
+			Description: data.Status.Code.Value,
+		},
+		Lane: types.TurvoLane{
+			Start: "N/A",
+			End:   "N/A",
+		},
+		GlobalRoute: []types.TurvoGlobalRoute{},
+		CustomerOrder: []types.TurvoCustomerOrder{
+			{
+				CustomerOrderSourceID: data.CustomerOrder[0].ID,
+				Customer: types.TurvoCustomer{
+					ID:   data.CustomerOrder[0].Customer.ID,
+					Name: customerName,
+				},
+			},
+		},
+		StartDate: types.TurvoDate{
+			Date:     data.Created,
+			TimeZone: "UTC",
+		},
+		EndDate: types.TurvoDate{
+			Date:     data.Updated,
+			TimeZone: "UTC",
+		},
+		LTLShipment: false,
+	}
+
+	// Add carrier order if available
+	if len(data.CarrierOrder) > 0 {
+		shipment.CarrierOrder = []types.TurvoCarrierOrder{
+			{
+				CarrierOrderSourceID: data.CarrierOrder[0].ID,
+				Carrier: types.TurvoCarrier{
+					ID:   data.CarrierOrder[0].Carrier.ID,
+					Name: carrierName,
+				},
+			},
+		}
+	}
+
+	return shipment
 }
 
 // transformDrumkitToTurvo transforms a Drumkit load to Turvo shipment format
