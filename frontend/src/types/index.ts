@@ -179,4 +179,11 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+  hasMore?: boolean;
+  pagination?: {
+    start: number;
+    pageSize: number;
+    totalRecordsInPage: number;
+    moreAvailable: boolean;
+  };
 }

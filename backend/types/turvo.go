@@ -366,4 +366,12 @@ type TurvoShipmentData struct {
 	Updated       string `json:"updated"`
 	LastUpdatedOn string `json:"lastUpdatedOn"`
 	CreatedDate   string `json:"createdDate"`
-} 
+}
+
+// TurvoPagination represents pagination information
+type TurvoPagination struct {
+	Start              int  `json:"start"`
+	PageSize           int  `json:"pageSize"`
+	TotalRecordsInPage int  `json:"totalRecordsInPage"`
+	MoreAvailable      bool `json:"moreAvailable"`
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -54,8 +55,17 @@ func main() {
 func getLoads(c *gin.Context, turvoService *services.TurvoService) {
 	fmt.Printf("DEBUG: Fetching loads from Turvo\n")
 	
+	// Get page parameter
+	pageStr := c.Query("page")
+	page := 0
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	
 	// Get shipments from Turvo
-	turvoShipments, err := turvoService.GetShipments()
+	turvoShipments, pagination, err := turvoService.GetShipments(page)
 	if err != nil {
 		fmt.Printf("DEBUG: Failed to get shipments from Turvo: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -72,10 +82,18 @@ func getLoads(c *gin.Context, turvoService *services.TurvoService) {
 		loads = append(loads, load)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response := gin.H{
 		"success": true,
 		"data":    loads,
-	})
+	}
+	
+	// Add pagination info if available
+	if pagination != nil {
+		response["hasMore"] = pagination.MoreAvailable
+		response["pagination"] = pagination
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // convertTurvoToDrumkit converts a Turvo shipment to Drumkit load format

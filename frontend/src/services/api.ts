@@ -12,9 +12,10 @@ const api = axios.create({
 
 export const loadService = {
   // Get all loads
-  getLoads: async (): Promise<ApiResponse<Load[]>> => {
+  getLoads: async (page: number = 0): Promise<ApiResponse<Load[]>> => {
     try {
-      const response = await api.get('/api/loads');
+      const params = page > 0 ? { page } : {};
+      const response = await api.get('/api/loads', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching loads:', error);

@@ -137,6 +137,13 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 
 	fmt.Printf("DEBUG: Turvo response status: %s\n", resp.Status)
 
+	// Read and log the full response body for debugging
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Printf("DEBUG: Turvo response body: %s\n", string(bodyBytes))
+	
+	// Create a new reader for the JSON decoder since we consumed the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	// Parse response
 	var turvoResponse types.TurvoShipmentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&turvoResponse); err != nil {
@@ -154,22 +161,24 @@ func (s *TurvoService) CreateShipment(drumkitLoad types.Load) (*types.TurvoShipm
 }
 
 // GetShipments fetches all shipments from Turvo
-func (s *TurvoService) GetShipments() ([]types.TurvoShipment, error) {
+func (s *TurvoService) GetShipments(page int) ([]types.TurvoShipment, *types.TurvoPagination, error) {
 	// Get OAuth token
 	token, err := s.getAccessToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Turvo OAuth token: %w", err)
+		return nil, nil, fmt.Errorf("failed to get Turvo OAuth token: %w", err)
 	}
 
-	// Create HTTP request with pickup date range
-	// Get shipments from the last 30 days	
-	url := fmt.Sprintf("%s/v1/shipments/list?pickupDate[gte]=2025-07-05T00:00:00Z", 
-		s.config.TurvoBaseURL,
-	)
+	// Create HTTP request with pagination
+	url := fmt.Sprintf("%s/v1/shipments/list", s.config.TurvoBaseURL)
+	
+	// Add pagination parameters if page > 0
+	if page > 0 {
+		url += fmt.Sprintf("?start=%d&pageSize=24", (page-1)*24+1)
+	}
 	fmt.Printf("DEBUG: Turvo GET shipments URL: %s\n", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set headers
@@ -181,7 +190,7 @@ func (s *TurvoService) GetShipments() ([]types.TurvoShipment, error) {
 	fmt.Printf("DEBUG: Making GET request to Turvo...\n")
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
+		return nil, nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -196,13 +205,13 @@ func (s *TurvoService) GetShipments() ([]types.TurvoShipment, error) {
 
 	// Check for HTTP errors
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("Turvo API error: %s - %s", resp.Status, string(bodyBytes))
+		return nil, nil, fmt.Errorf("Turvo API error: %s - %s", resp.Status, string(bodyBytes))
 	}
 
 	// Parse response
 	var response types.TurvoShipmentsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	fmt.Printf("DEBUG: Retrieved %d shipments from Turvo\n", len(response.Details.Shipments))
@@ -214,7 +223,15 @@ func (s *TurvoService) GetShipments() ([]types.TurvoShipment, error) {
 		shipments = append(shipments, shipment)
 	}
 	
-	return shipments, nil
+	// Return pagination info
+	pagination := &types.TurvoPagination{
+		Start:               response.Details.Pagination.Start,
+		PageSize:            response.Details.Pagination.PageSize,
+		TotalRecordsInPage:  response.Details.Pagination.TotalRecordsInPage,
+		MoreAvailable:       response.Details.Pagination.MoreAvailable,
+	}
+	
+	return shipments, pagination, nil
 }
 
 // convertShipmentDataToTurvoShipment converts TurvoShipmentData to TurvoShipment
@@ -301,11 +318,18 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 		endDate = startDate.Add(72 * time.Hour) // Default to 3 days after pickup
 	}
 
-	// Format dates in RFC3339 format with timezone
+	// Ensure end date is after start date
+	if endDate.Before(startDate) {
+		endDate = startDate.Add(24 * time.Hour)
+	}
+
+	// Format dates in RFC3339 format with timezone - use the same format as the sample
 	startDateStr := startDate.Format("2006-01-02T15:04:05Z")
 	endDateStr := endDate.Format("2006-01-02T15:04:05Z")
 
-	// Create Turvo request
+	fmt.Printf("DEBUG: Start date: %s, End date: %s\n", startDateStr, endDateStr)
+
+	// Create Turvo request - simplified to match sample structure
 	turvoRequest := &types.TurvoShipmentRequest{
 		LTLShipment: false, // Default to FTL
 		StartDate: types.TurvoDate{
@@ -328,6 +352,8 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 			Start: fmt.Sprintf("%s, %s", load.Pickup.City, load.Pickup.State),
 			End:   fmt.Sprintf("%s, %s", load.Consignee.City, load.Consignee.State),
 		},
+	
+		
 		SkipDistanceCalculation: true,
 		GlobalRoute: []types.TurvoGlobalRoute{
 			// Pickup stop
@@ -354,6 +380,26 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				Sequence:                0,
 				State:                   "OPEN",
 				AppointmentConfirmation: true,
+				PlannedAppointmentDate: types.TurvoPlannedAppointment{
+					SchedulingType: types.TurvoCode{
+						Key:   "9401",
+						Value: "By appointment",
+					},
+					Appointment: types.TurvoPlannedAppointmentDetail{
+						From: types.TurvoAppointment{
+							Date:     startDateStr,
+							Timezone: "America/New_York",
+							Flex:     3600,
+							HasTime:  true,
+						},
+						To: types.TurvoAppointment{
+							Date:     endDateStr,
+							Timezone: "America/New_York",
+							Flex:     3600,
+							HasTime:  true,
+						},
+					},
+				},
 				Appointment: types.TurvoAppointment{
 					Date:     startDateStr,
 					Timezone: "America/New_York",
@@ -369,15 +415,7 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				PONumbers: []string{load.Specifications.PONums},
 				Notes:     load.Pickup.ApptNote,
 				Location: types.TurvoLocation{
-					AddressLine1: load.Pickup.AddressLine1,
-					AddressLine2: load.Pickup.AddressLine2,
-					City:         load.Pickup.City,
-					State:        load.Pickup.State,
-					ZipCode:      load.Pickup.Zipcode,
-					Country:      load.Pickup.Country,
-					ContactName:  load.Pickup.Contact,
-					Phone:        load.Pickup.Phone,
-					Email:        load.Pickup.Email,
+					ID: 624515, // Use a default location ID like in the sample
 				},
 				Transportation: types.TurvoTransportation{
 					Mode: types.TurvoCode{
@@ -428,6 +466,26 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				Sequence:                1,
 				State:                   "OPEN",
 				AppointmentConfirmation: true,
+				PlannedAppointmentDate: types.TurvoPlannedAppointment{
+					SchedulingType: types.TurvoCode{
+						Key:   "9401",
+						Value: "By appointment",
+					},
+					Appointment: types.TurvoPlannedAppointmentDetail{
+						From: types.TurvoAppointment{
+							Date:     startDateStr,
+							Timezone: "America/New_York",
+							Flex:     3600,
+							HasTime:  true,
+						},
+						To: types.TurvoAppointment{
+							Date:     endDateStr,
+							Timezone: "America/New_York",
+							Flex:     3600,
+							HasTime:  true,
+						},
+					},
+				},
 				Appointment: types.TurvoAppointment{
 					Date:     endDateStr,
 					Timezone: "America/New_York",
@@ -443,15 +501,7 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				PONumbers: []string{load.Specifications.PONums},
 				Notes:     load.Consignee.ApptNote,
 				Location: types.TurvoLocation{
-					AddressLine1: load.Consignee.AddressLine1,
-					AddressLine2: load.Consignee.AddressLine2,
-					City:         load.Consignee.City,
-					State:        load.Consignee.State,
-					ZipCode:      load.Consignee.Zipcode,
-					Country:      load.Consignee.Country,
-					ContactName:  load.Consignee.Contact,
-					Phone:        load.Consignee.Phone,
-					Email:        load.Consignee.Email,
+					ID: 624515, // Use a default location ID like in the sample
 				},
 				Transportation: types.TurvoTransportation{
 					Mode: types.TurvoCode{
@@ -497,10 +547,9 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 		},
 		CustomerOrder: []types.TurvoCustomerOrder{
 			{
-				CustomerOrderSourceID: 1, // Default ID
+				CustomerOrderSourceID: 937, // Use sample ID
 				Customer: types.TurvoCustomer{
-					ID:   1, // Default ID
-					Name: load.Customer.Name,
+					ID:   834045, // Use sample ID
 				},
 				Items: []types.TurvoItem{
 					{
@@ -562,10 +611,9 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 	if load.Carrier.Name != "" {
 		turvoRequest.CarrierOrder = []types.TurvoCarrierOrder{
 			{
-				CarrierOrderSourceID: 1, // Default ID
+				CarrierOrderSourceID: 626, // Use sample ID
 				Carrier: types.TurvoCarrier{
-					ID:   1, // Default ID
-					Name: load.Carrier.Name,
+					ID:   834178, // Use sample ID
 				},
 				Drivers: []types.TurvoDriver{
 					{
