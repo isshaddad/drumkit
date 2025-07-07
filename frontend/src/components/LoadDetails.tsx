@@ -291,7 +291,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString)?.toLocaleString();
   };
 
   const getStatusColor = (status: string) => {
@@ -441,7 +441,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                   Stops
                 </h5>
                 <div className="space-y-3">
-                  {shipmentDetails.globalRoute.map((stop, index) => (
+                  {shipmentDetails.globalRoute?.map((stop, index) => (
                     <div
                       key={stop.id}
                       className="border-l-4 border-blue-500 pl-4"
@@ -476,12 +476,12 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
             </div>
 
             {/* Customer Information */}
-            {shipmentDetails.customerOrder.length > 0 && (
+            {shipmentDetails.customerOrder?.length > 0 && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="text-lg font-medium text-gray-900 mb-3">
                   Customer Information
                 </h4>
-                {shipmentDetails.customerOrder.map((order, index) => (
+                {shipmentDetails.customerOrder?.map((order, index) => (
                   <div key={order.id} className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -497,13 +497,13 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                           Total Miles
                         </label>
                         <p className="text-sm text-gray-900">
-                          {order.totalMiles.toLocaleString()} miles
+                          {order.totalMiles?.toLocaleString()} miles
                         </p>
                       </div>
                     </div>
 
                     {/* Items */}
-                    {order.items.length > 0 && (
+                    {order.items?.length > 0 && (
                       <div className="mt-4">
                         <h5 className="text-md font-medium text-gray-900 mb-2">
                           Items
@@ -527,7 +527,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {order.items.map((item) => (
+                              {order.items?.map((item) => (
                                 <tr key={item.id}>
                                   <td className="px-3 py-2 text-sm text-gray-900">
                                     {item.name}
@@ -554,12 +554,12 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
             )}
 
             {/* Carrier Information */}
-            {shipmentDetails.carrierOrder.length > 0 && (
+            {shipmentDetails.carrierOrder?.length > 0 && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="text-lg font-medium text-gray-900 mb-3">
                   Carrier Information
                 </h4>
-                {shipmentDetails.carrierOrder.map((order, index) => (
+                {shipmentDetails.carrierOrder?.map((order, index) => (
                   <div key={order.id} className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -587,13 +587,13 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                     </div>
 
                     {/* Drivers */}
-                    {order.drivers && order.drivers.length > 0 && (
+                    {order.drivers && order.drivers?.length > 0 && (
                       <div className="mt-4">
                         <h5 className="text-md font-medium text-gray-900 mb-2">
                           Drivers
                         </h5>
                         <div className="space-y-2">
-                          {order.drivers.map((driver) => (
+                          {order.drivers?.map((driver) => (
                             <div
                               key={driver.driverAssignmentId}
                               className="border-l-4 border-green-500 pl-4"
@@ -630,7 +630,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                   </label>
                   <p className="text-sm text-gray-900">
                     $
-                    {shipmentDetails.margin.totalReceivableAmount.toLocaleString()}
+                    {shipmentDetails.margin?.totalReceivableAmount?.toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -639,7 +639,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                   </label>
                   <p className="text-sm text-gray-900">
                     $
-                    {shipmentDetails.margin.totalPayableAmount.toLocaleString()}
+                    {shipmentDetails.margin?.totalPayableAmount?.toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -647,7 +647,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                     Margin
                   </label>
                   <p className="text-sm text-gray-900">
-                    ${shipmentDetails.margin.value.toLocaleString()}
+                    ${shipmentDetails.margin?.value?.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -666,12 +666,12 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                     </label>
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        shipmentDetails.tracking.isTracking
+                        shipmentDetails?.tracking?.isTracking
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {shipmentDetails.tracking.isTracking
+                      {shipmentDetails?.tracking?.isTracking
                         ? 'Active'
                         : 'Inactive'}
                     </span>
@@ -681,7 +681,7 @@ const LoadDetails: React.FC<LoadDetailsProps> = ({ load, onClose }) => {
                       Description
                     </label>
                     <p className="text-sm text-gray-900">
-                      {shipmentDetails.tracking.description}
+                      {shipmentDetails?.tracking?.description}
                     </p>
                   </div>
                 </div>
