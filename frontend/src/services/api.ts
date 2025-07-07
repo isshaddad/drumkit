@@ -35,4 +35,15 @@ export const loadService = {
       throw error;
     }
   },
+
+  // Get shipment details
+  getShipmentDetails: async (shipmentId: string): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get(`/api/shipments/${shipmentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching shipment details:', error);
+      throw error;
+    }
+  },
 };

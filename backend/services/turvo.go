@@ -234,6 +234,60 @@ func (s *TurvoService) GetShipments(page int) ([]types.TurvoShipment, *types.Tur
 	return shipments, pagination, nil
 }
 
+// GetShipmentDetails fetches detailed information about a specific shipment
+func (s *TurvoService) GetShipmentDetails(shipmentID string) (map[string]interface{}, error) {
+	// Get OAuth token
+	token, err := s.getAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Turvo OAuth token: %w", err)
+	}
+
+	// Create HTTP request
+	url := fmt.Sprintf("%s/v1/shipments/%s", s.config.TurvoBaseURL, shipmentID)
+	fmt.Printf("DEBUG: Turvo GET shipment details URL: %s\n", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("x-api-key", s.config.TurvoXApiKey)
+
+	// Make the request
+	fmt.Printf("DEBUG: Making GET request to Turvo for shipment details...\n")
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("DEBUG: Turvo GET shipment details response status: %s\n", resp.Status)
+
+	// Read and log the response body for debugging
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Printf("DEBUG: Turvo GET shipment details response body: %s\n", string(bodyBytes))
+	
+	// Create a new reader for the JSON decoder since we consumed the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Check for HTTP errors
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("Turvo API error: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	// Parse response as generic map to handle the complex structure
+	var response map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	fmt.Printf("DEBUG: Retrieved shipment details from Turvo\n")
+	
+	return response, nil
+}
+
 // convertShipmentDataToTurvoShipment converts TurvoShipmentData to TurvoShipment
 func convertShipmentDataToTurvoShipment(data types.TurvoShipmentData) types.TurvoShipment {
 	// Extract customer name
@@ -249,7 +303,7 @@ func convertShipmentDataToTurvoShipment(data types.TurvoShipmentData) types.Turv
 	}
 
 	shipment := types.TurvoShipment{
-		ShipmentID: data.CustomID,
+		ShipmentID: fmt.Sprintf("%d", data.ID), // Use internal ID
 		Status: types.TurvoStatus{
 			Code: types.TurvoCode{
 				Key:   data.Status.Code.Key,

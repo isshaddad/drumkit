@@ -41,6 +41,11 @@ func main() {
 		api.POST("/loads", func(c *gin.Context) {
 			createLoad(c, turvoService)
 		})
+
+		// Get shipment details
+		api.GET("/shipments/:id", func(c *gin.Context) {
+			getShipmentDetails(c, turvoService)
+		})
 	}
 
 	// Health check
@@ -94,6 +99,36 @@ func getLoads(c *gin.Context, turvoService *services.TurvoService) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// getShipmentDetails returns detailed information about a specific shipment
+func getShipmentDetails(c *gin.Context, turvoService *services.TurvoService) {
+	shipmentID := c.Param("id")
+	if shipmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Shipment ID is required",
+		})
+		return
+	}
+
+	fmt.Printf("DEBUG: Fetching shipment details for ID: %s\n", shipmentID)
+	
+	// Get shipment details from Turvo
+	shipmentDetails, err := turvoService.GetShipmentDetails(shipmentID)
+	if err != nil {
+		fmt.Printf("DEBUG: Failed to get shipment details from Turvo: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to fetch shipment details from Turvo: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    shipmentDetails,
+	})
 }
 
 // convertTurvoToDrumkit converts a Turvo shipment to Drumkit load format

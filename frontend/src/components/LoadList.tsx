@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Load } from '../types';
 import { loadService } from '../services/api';
+import LoadDetails from './LoadDetails';
 
 const LoadList: React.FC = () => {
   const [loads, setLoads] = useState<Load[]>([]);
@@ -9,6 +10,7 @@ const LoadList: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
 
   useEffect(() => {
     fetchLoads();
@@ -49,6 +51,14 @@ const LoadList: React.FC = () => {
     if (!loadingMore && hasMore) {
       fetchLoads(currentPage + 1, true);
     }
+  };
+
+  const handleLoadClick = (load: Load) => {
+    setSelectedLoad(load);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedLoad(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -150,7 +160,8 @@ const LoadList: React.FC = () => {
               {loads.map((load) => (
                 <tr
                   key={load.externalTMSLoadID || load.id || Math.random()}
-                  className="hover:bg-gray-50"
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleLoadClick(load)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {load.freightLoadID || load.reference || 'N/A'}
@@ -212,6 +223,11 @@ const LoadList: React.FC = () => {
             )}
           </button>
         </div>
+      )}
+
+      {/* Load Details Modal */}
+      {selectedLoad && (
+        <LoadDetails load={selectedLoad} onClose={handleCloseDetails} />
       )}
     </div>
   );
