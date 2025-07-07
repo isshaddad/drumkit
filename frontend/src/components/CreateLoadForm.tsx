@@ -157,7 +157,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [activeSection, setActiveSection] = useState('basic');
+  const [activeSection, setActiveSection] = useState('customer');
 
   const handleInputChange = (section: string, field: string, value: any) => {
     setFormData((prev) => {
@@ -423,58 +423,6 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
 
   const renderSection = () => {
     switch (activeSection) {
-      case 'basic':
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  External TMS Load ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.externalTMSLoadID}
-                  onChange={(e) =>
-                    handleInputChange('externalTMSLoadID', '', e.target.value)
-                  }
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="e.g., TURVO-001"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Freight Load ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.freightLoadID}
-                  onChange={(e) =>
-                    handleInputChange('freightLoadID', '', e.target.value)
-                  }
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="e.g., FL-2025-001"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) =>
-                  handleInputChange('status', '', e.target.value)
-                }
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              >
-                <option value="Created">Created</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Delivered">Delivered</option>
-              </select>
-            </div>
-          </div>
-        );
-
       case 'customer':
         return (
           <div className="space-y-4">
@@ -2329,7 +2277,6 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
           {/* Section Navigation */}
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {[
-              'basic',
               'customer',
               'billto',
               'pickup',
@@ -2362,7 +2309,6 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               type="button"
               onClick={() => {
                 const sections = [
-                  'basic',
                   'customer',
                   'billto',
                   'pickup',
@@ -2376,7 +2322,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                   setActiveSection(sections[currentIndex - 1]);
                 }
               }}
-              disabled={activeSection === 'basic'}
+              disabled={activeSection === 'customer'}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
@@ -2387,7 +2333,6 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                 type="button"
                 onClick={() => {
                   const sections = [
-                    'basic',
                     'customer',
                     'billto',
                     'pickup',
