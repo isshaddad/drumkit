@@ -19,7 +19,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
     freightLoadID: 'FL-2025-001',
     status: 'Created',
     customer: {
-      externalTMSId: 'CUST-001',
+      externalTMSId: '834045',
       name: 'Acme Corporation',
       addressLine1: '123 Main Street',
       addressLine2: 'Suite 100',
@@ -33,7 +33,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       refNumber: 'REF-ACME-001',
     },
     billTo: {
-      externalTMSId: 'BILL-001',
+      externalTMSId: '834045',
       name: 'Acme Corporation Billing',
       addressLine1: '456 Billing Avenue',
       addressLine2: 'Floor 2',
@@ -46,7 +46,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       email: 'billing@acme.com',
     },
     pickup: {
-      externalTMSId: 'PICKUP-001',
+      externalTMSId: '624515',
       name: 'Acme Warehouse',
       addressLine1: '789 Industrial Boulevard',
       addressLine2: 'Building A',
@@ -66,7 +66,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       warehouseId: 'WH-001',
     },
     consignee: {
-      externalTMSId: 'DELIVERY-001',
+      externalTMSId: '624515',
       name: 'Acme Distribution Center',
       addressLine1: '321 Delivery Street',
       addressLine2: 'Building B',
@@ -112,7 +112,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
       deliveryStart: formatDateTimeForInput('2025-07-08T14:00:00Z'),
       deliveryEnd: formatDateTimeForInput('2025-07-08T16:00:00Z'),
       signedBy: 'Sarah Wilson',
-      externalTMSId: 'CARRIER-001',
+      externalTMSId: '945084',
     },
     rateData: {
       customerRateType: 'Flat',
@@ -182,8 +182,10 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -247,7 +249,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
           freightLoadID: 'FL-2025-002',
           status: 'Created',
           customer: {
-            externalTMSId: 'CUST-001',
+            externalTMSId: '834045',
             name: 'Acme Corporation',
             addressLine1: '123 Main Street',
             addressLine2: 'Suite 100',
@@ -261,7 +263,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             refNumber: 'REF-ACME-001',
           },
           billTo: {
-            externalTMSId: 'BILL-001',
+            externalTMSId: '834045',
             name: 'Acme Corporation Billing',
             addressLine1: '456 Billing Avenue',
             addressLine2: 'Floor 2',
@@ -274,7 +276,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             email: 'billing@acme.com',
           },
           pickup: {
-            externalTMSId: 'PICKUP-001',
+            externalTMSId: '624515',
             name: 'Acme Warehouse',
             addressLine1: '789 Industrial Boulevard',
             addressLine2: 'Building A',
@@ -294,7 +296,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             warehouseId: 'WH-001',
           },
           consignee: {
-            externalTMSId: 'DELIVERY-001',
+            externalTMSId: '624515',
             name: 'Acme Distribution Center',
             addressLine1: '321 Delivery Street',
             addressLine2: 'Building B',
@@ -340,7 +342,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             deliveryStart: '2025-07-08T14:00:00Z',
             deliveryEnd: '2025-07-08T16:00:00Z',
             signedBy: 'Sarah Wilson',
-            externalTMSId: 'CARRIER-001',
+            externalTMSId: '945084',
           },
           rateData: {
             customerRateType: 'Flat',
@@ -432,7 +434,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Customer Name *
+                  Customer Name
                 </label>
                 <input
                   type="text"
@@ -446,10 +448,10 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  External TMS ID
+                  External TMS ID *
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={formData.customer.externalTMSId}
                   onChange={(e) =>
                     handleInputChange(
@@ -459,13 +461,13 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                     )
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="CUST-001"
+                  placeholder="834045"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Address Line 1 *
+                Address Line 1
               </label>
               <input
                 type="text"
@@ -494,7 +496,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  City *
+                  City
                 </label>
                 <input
                   type="text"
@@ -508,7 +510,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  State *
+                  State
                 </label>
                 <input
                   type="text"
@@ -522,7 +524,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  ZIP Code *
+                  ZIP Code
                 </label>
                 <input
                   type="text"
@@ -621,7 +623,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Bill To Name *
+                  Bill To Name
                 </label>
                 <input
                   type="text"
@@ -635,22 +637,22 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  External TMS ID
+                  External TMS ID *
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={formData.billTo.externalTMSId}
                   onChange={(e) =>
                     handleInputChange('billTo', 'externalTMSId', e.target.value)
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="BILL-001"
+                  placeholder="834045"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Address Line 1 *
+                Address Line 1
               </label>
               <input
                 type="text"
@@ -679,7 +681,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  City *
+                  City
                 </label>
                 <input
                   type="text"
@@ -693,7 +695,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  State *
+                  State
                 </label>
                 <input
                   type="text"
@@ -707,7 +709,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  ZIP Code *
+                  ZIP Code
                 </label>
                 <input
                   type="text"
@@ -790,7 +792,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Location Name *
+                  Location Name
                 </label>
                 <input
                   type="text"
@@ -804,22 +806,22 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  External TMS ID
+                  External TMS ID *
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={formData.pickup.externalTMSId}
                   onChange={(e) =>
                     handleInputChange('pickup', 'externalTMSId', e.target.value)
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="PICKUP-001"
+                  placeholder="624515"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Address Line 1 *
+                Address Line 1
               </label>
               <input
                 type="text"
@@ -848,7 +850,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  City *
+                  City
                 </label>
                 <input
                   type="text"
@@ -862,7 +864,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  State *
+                  State
                 </label>
                 <input
                   type="text"
@@ -876,7 +878,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  ZIP Code *
+                  ZIP Code
                 </label>
                 <input
                   type="text"
@@ -1051,7 +1053,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Location Name *
+                  Location Name
                 </label>
                 <input
                   type="text"
@@ -1065,10 +1067,10 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  External TMS ID
+                  External TMS ID *
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={formData.consignee.externalTMSId}
                   onChange={(e) =>
                     handleInputChange(
@@ -1078,13 +1080,13 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
                     )
                   }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="DELIVERY-001"
+                  placeholder="624515"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Address Line 1 *
+                Address Line 1
               </label>
               <input
                 type="text"
@@ -1113,7 +1115,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  City *
+                  City
                 </label>
                 <input
                   type="text"
@@ -1127,7 +1129,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  State *
+                  State
                 </label>
                 <input
                   type="text"
@@ -1141,7 +1143,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  ZIP Code *
+                  ZIP Code
                 </label>
                 <input
                   type="text"
@@ -1322,6 +1324,24 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               Carrier Information
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  External TMS ID *
+                </label>
+                <input
+                  type="number"
+                  value={formData.carrier.externalTMSId}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'carrier',
+                      'externalTMSId',
+                      e.target.value
+                    )
+                  }
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="945084"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Carrier Name
@@ -1793,7 +1813,7 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Total Weight (lbs) *
+                  Total Weight (lbs)
                 </label>
                 <input
                   type="number"
@@ -2273,7 +2293,16 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault(); // Prevent automatic form submission
+            // Only allow submission if we're on the last section and user clicks the button
+            if (activeSection === 'specs') {
+              handleSubmit(e);
+            }
+          }}
+          className="space-y-6"
+        >
           {/* Section Navigation */}
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {[
@@ -2352,7 +2381,8 @@ const CreateLoadForm: React.FC<CreateLoadFormProps> = ({ onLoadCreated }) => {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={loading || !isFormValid()}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >

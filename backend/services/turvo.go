@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"turvo-app/config"
@@ -469,7 +470,12 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				PONumbers: []string{load.Specifications.PONums},
 				Notes:     load.Pickup.ApptNote,
 				Location: types.TurvoLocation{
-					ID: 624515, // Use a default location ID like in the sample
+					ID:   func() int {
+						if id, err := strconv.Atoi(load.Pickup.ExternalTMSId); err == nil {
+							return id
+						}
+						return 1 // Default fallback ID
+					}(),
 				},
 				Transportation: types.TurvoTransportation{
 					Mode: types.TurvoCode{
@@ -555,8 +561,12 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 				PONumbers: []string{load.Specifications.PONums},
 				Notes:     load.Consignee.ApptNote,
 				Location: types.TurvoLocation{
-					ID: 624515, // Use a default location ID like in the sample
-				},
+					ID:   func() int {
+						if id, err := strconv.Atoi(load.Consignee.ExternalTMSId); err == nil {
+							return id
+						}
+						return 1 // Default fallback ID
+					}(),				},
 				Transportation: types.TurvoTransportation{
 					Mode: types.TurvoCode{
 						Key:   "24105",
@@ -603,7 +613,12 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 			{
 				CustomerOrderSourceID: 937, // Use sample ID
 				Customer: types.TurvoCustomer{
-					ID:   834045, // Use sample ID
+					ID:   func() int {
+						if id, err := strconv.Atoi(load.Customer.ExternalTMSId); err == nil {
+							return id
+						}
+						return 1 // Default fallback ID
+					}(), // Convert string to int with fallback
 				},
 				Items: []types.TurvoItem{
 					{
@@ -667,7 +682,12 @@ func (s *TurvoService) transformDrumkitToTurvo(load types.Load) (*types.TurvoShi
 			{
 				CarrierOrderSourceID: 626, // Use sample ID
 				Carrier: types.TurvoCarrier{
-					ID:   834178, // Use sample ID
+					ID:   func() int {
+						if id, err := strconv.Atoi(load.Carrier.ExternalTMSId); err == nil {
+							return id
+						}
+						return 1 // Default fallback ID
+					}(), // Convert string to int with fallback
 				},
 				Drivers: []types.TurvoDriver{
 					{
