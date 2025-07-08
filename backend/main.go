@@ -26,11 +26,13 @@ func main() {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{
 		"http://localhost:3000",
-		"https://*.amplifyapp.com",  // Allow Amplify URLs
+		"https://main.d12n7x58zaq4la.amplifyapp.com",  // Your specific Amplify URL
+		"https://*.amplifyapp.com",  // Allow other Amplify URLs
 		"https://*.amplifyapp.net",  // Alternative Amplify domain
 	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
 
 	// API routes
