@@ -27,7 +27,6 @@ backend/*.so
 backend/*.dylib
 backend/*.test
 backend/*.out
-backend/go.sum
 
 # IDE and editor files
 .vscode/
